@@ -34,6 +34,7 @@ model::model(gl_context const& context, send_mvp_function const& send_mvp,
    _texture_addition(0),
    _filtering_type(filtering_type::NEAREST),
    _vertex_count(vertices.size()),
+   _show_mipmap_levels(false),
    _data(new model_data(_context)) {
 
    glGenBuffers(1, &_data->_vertexbuffer);
@@ -96,6 +97,8 @@ void model::draw() {
    _context.use_shader(_data->_texture_shader_id);
    glUniform1f(glGetUniformLocation(_data->_texture_shader_id, "multiple"),
          1 + ((float)_texture_addition) / 10);
+   glUniform1f(glGetUniformLocation(_data->_texture_shader_id, "show_mipmap"),
+         _show_mipmap_levels);
    _send_mvp(glGetUniformLocation(_data->_texture_shader_id, "MVP"));
    glEnable(GL_POLYGON_OFFSET_FILL);
    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

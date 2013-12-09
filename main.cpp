@@ -62,6 +62,8 @@ void setup_controller(gl_context& context, camera& main_camera, model_switcher& 
          ms.current_model().increase_multiple();
       else if(key == GLFW_KEY_DOWN && action == GLFW_PRESS)
          ms.current_model().decrease_multiple();
+      else if(key == GLFW_KEY_M && action == GLFW_PRESS)
+         ms.current_model().toggle_show_mipmap_levels();
    });
    controller::instance()->cursor_pos([&](double xpos, double ypos) {
       if(!_rotation_mode) return;

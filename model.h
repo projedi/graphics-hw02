@@ -33,12 +33,14 @@ struct model {
    void prev_filtering() { --_filtering_type; }
    void increase_multiple() { ++_texture_addition; }
    void decrease_multiple() { if(_texture_addition > -9) --_texture_addition; }
+   void toggle_show_mipmap_levels() { _show_mipmap_levels = !_show_mipmap_levels; }
 private:
    gl_context const& _context;
    send_mvp_function _send_mvp;
    int _texture_addition; // actual multiplicator is 1 + _texture_addition / 10
    filtering_type _filtering_type;
    GLsizei _vertex_count;
+   bool _show_mipmap_levels;
    std::shared_ptr<model_data> _data;
 };
 
