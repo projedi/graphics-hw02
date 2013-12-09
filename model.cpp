@@ -220,14 +220,27 @@ model create_cube_model(gl_context const& ctx, send_mvp_function const& f) {
    return model(ctx, f, vertices, uvs, img.getWidth(), img.getHeight(), img.accessPixels());
 }
 
+std::ostream& operator<<(std::ostream& ost, glm::vec3 const& v) {
+   return ost << "(" << v[0] << ", " << v[1] << ", " << v[2] << ")";
+}
+
+std::ostream& operator<<(std::ostream& ost, glm::vec2 const& v) {
+   return ost << "(" << v[0] << ", " << v[1] << ")";
+}
+
 struct xyzuv {
    xyzuv(glm::vec3 v): xyz(v) {
-      uv[0] = 1 - std::atan2(v[2], v[0]) / 2.0f / M_PI;
+      uv[0] = (1 + std::atan2(v[0], v[2]) / M_PI) / 2.0;
       uv[1] = 1 - std::acos(v[1]) / M_PI;
+      //if(uv[0] > 1 || uv[0] < 0 || uv[1] > 1 || uv[1] < 0) std::cerr << v << ": " << uv << std::endl;
    }
    glm::vec3 xyz;
    glm::vec2 uv;
 };
+
+std::ostream& operator<<(std::ostream& ost, xyzuv const& v) {
+   return ost << v.xyz << "<->" << v.uv;
+}
 
 // This isn't a sum operator.
 xyzuv operator+(xyzuv const& a, xyzuv const& b) {
@@ -235,20 +248,43 @@ xyzuv operator+(xyzuv const& a, xyzuv const& b) {
 }
 
 struct triangle {
+   triangle(xyzuv a, xyzuv b, xyzuv c): A(a), B(b), C(c) {
+      auto dist = [](xyzuv a, xyzuv b, float d) { return std::abs(a.uv[0] + d - b.uv[0]); };
+      float a2b = dist(a, b, 0);
+      float a2c = dist(a, c, 0);
+      float b2c = dist(b, c, 0);
+      if(dist(a, b, 1) < a2b && dist(a, c, 1) < a2c) {
+         A.uv[0] += 1;
+      } else if(dist(a, b, -1) < a2b && dist(a, c, -1) < a2c) {
+         A.uv[0] -= 1;
+      } else if(dist(b, a, 1) < a2b && dist(b, c, 1) < b2c) {
+         B.uv[0] += 1;
+      } else if(dist(b, a, -1) < a2b && dist(b, c, -1) < b2c) {
+         B.uv[0] -= 1;
+      } else if(dist(c, a, 1) < a2c && dist(c, b, 1) < b2c) {
+         C.uv[0] += 1;
+      } else if(dist(c, a, -1) < a2c && dist(c, b, -1) < b2c) {
+         C.uv[0] -= 1;
+      }
+   }
    xyzuv A;
    xyzuv B;
    xyzuv C;
 };
+
+std::ostream& operator<<(std::ostream& ost, triangle const& t) {
+   return ost << "triangle { " << t.A << ", " << t.B << ", " << t.C << " }";
+}
 
 std::vector<triangle> divide_triangle(triangle const& t) {
    xyzuv f = t.A + t.B;
    xyzuv g = t.B + t.C;
    xyzuv h = t.A + t.C;
    std::vector<triangle> res;
-   res.push_back({ t.A, f, h });
-   res.push_back({ f, g, h });
-   res.push_back({ g, t.C, h });
-   res.push_back({ f, t.B, g });
+   res.push_back(triangle(t.A, f, h));
+   res.push_back(triangle(f, g, h));
+   res.push_back(triangle(g, t.C, h));
+   res.push_back(triangle(f, t.B, g));
    return res;
 }
 
@@ -269,18 +305,19 @@ std::vector<triangle> iteration0() {
    xyzuv D(glm::vec3(0,1,0));
    xyzuv E(glm::vec3(0,-1,0));
    std::vector<triangle> res;
-   res.push_back({ A, B, D });
-   res.push_back({ B, C, D });
-   res.push_back({ C, A, D });
-   res.push_back({ B, A, E });
-   res.push_back({ C, B, E });
-   res.push_back({ A, C, E });
+   res.push_back(triangle(A, B, D));
+   res.push_back(triangle(B, C, D));
+   res.push_back(triangle(C, A, D));
+   res.push_back(triangle(B, A, E));
+   res.push_back(triangle(C, B, E));
+   res.push_back(triangle(A, C, E));
    return res;
 }
 
 void convert_triangles(std::vector<triangle> const& ts,
       std::vector<glm::vec3>& xyzs, std::vector<glm::vec2>& uvs) {
    for(auto t: ts) {
+      //std::cerr << t << std::endl;
       xyzs.push_back(t.A.xyz);
       xyzs.push_back(t.B.xyz);
       xyzs.push_back(t.C.xyz);

@@ -30,10 +30,6 @@ void camera::update_matrices() {
    _mvp = projection * view * model;
 }
 
-std::ostream& operator <<(std::ostream& ost, glm::vec3 const& vec) {
-   return ost << "(" << vec.x << ", " << vec.y << ", " << vec.z << ")";
-}
-
 void camera::set_angles(float up_angle, float right_angle) {
    glm::vec3 up = glm::cross(_right, _direction);
    _direction = glm::rotate(glm::rotate(_direction, up_angle, up), right_angle, _right);
