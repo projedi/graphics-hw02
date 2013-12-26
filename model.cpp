@@ -35,6 +35,7 @@ model::model(gl_context const& context, send_mvp_function const& send_mvp,
    _filtering_type(filtering_type::NEAREST),
    _vertex_count(vertices.size()),
    _show_mipmap_levels(false),
+   _show_wireframe(true),
    _data(new model_data(_context)) {
 
    glGenBuffers(1, &_data->_vertexbuffer);
@@ -58,6 +59,33 @@ model::model(gl_context const& context, send_mvp_function const& send_mvp,
 
    _data->_texture_shader_id = _context.add_shader("texture.vert", "texture.frag");
    _data->_wire_shader_id = _context.add_shader("wirecolor.vert", "wirecolor.frag");
+}
+
+model::model(model&& m):
+   _context(m._context),
+   _send_mvp(std::move(m._send_mvp)),
+   _texture_addition(m._texture_addition),
+   _filtering_type(m._filtering_type),
+   _vertex_count(m._vertex_count),
+   _show_mipmap_levels(m._show_mipmap_levels),
+   _show_wireframe(m._show_wireframe),
+   _data(std::move(m._data)) { }
+
+model& model::operator=(model&& m) {
+   model n(std::move(m));
+   swap(std::move(n));
+   return *this;
+}
+
+void model::swap(model&& m) {
+   using std::swap;
+   swap(_send_mvp, m._send_mvp);
+   swap(_texture_addition, m._texture_addition);
+   swap(_filtering_type, m._filtering_type);
+   swap(_vertex_count, m._vertex_count);
+   swap(_show_mipmap_levels, m._show_mipmap_levels);
+   swap(_show_wireframe, m._show_wireframe);
+   swap(_data, m._data);
 }
 
 void set_texture_params(filtering_type const& t) {
@@ -106,10 +134,12 @@ void model::draw() {
    glDrawArrays(GL_TRIANGLES, 0, _vertex_count);
    glDisable(GL_POLYGON_OFFSET_FILL);
 
-   //_context.use_shader(_data->_wire_shader_id);
-   //_send_mvp(glGetUniformLocation(_data->_wire_shader_id, "MVP"));
-   //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
-   //glDrawArrays(GL_TRIANGLES, 0, _vertex_count);
+   if(_show_wireframe) {
+      _context.use_shader(_data->_wire_shader_id);
+      _send_mvp(glGetUniformLocation(_data->_wire_shader_id, "MVP"));
+      glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
+      glDrawArrays(GL_TRIANGLES, 0, _vertex_count);
+   }
 
    glDisableVertexAttribArray(0);
    glDisableVertexAttribArray(1);
@@ -330,11 +360,11 @@ void convert_triangles(std::vector<triangle> const& ts,
    }
 }
 
-model create_sphere_model(gl_context const& ctx, send_mvp_function const& f) {
+model create_sphere_model(gl_context const& ctx, send_mvp_function const& f, int iters) {
    std::vector<glm::vec3> vertices;
    std::vector<glm::vec2> uvs;
    auto ts = iteration0();
-   for(int i = 0; i != 5; ++i) ts = iteration(ts);
+   for(int i = 0; i != iters; ++i) ts = iteration(ts);
    convert_triangles(ts, vertices, uvs);
    fipImage img;
    if(!img.load("earth_texture_grid.bmp"))

@@ -28,12 +28,16 @@ struct model {
          std::vector<glm::vec3> const& vertices,
          std::vector<glm::vec2> const& uvs,
          unsigned width, unsigned height, uint8_t* pixels);
+   model(model&&);
+   model& operator=(model&&);
+   void swap(model&&);
    void draw();
    void next_filtering() { ++_filtering_type; }
    void prev_filtering() { --_filtering_type; }
    void increase_multiple() { ++_texture_addition; }
    void decrease_multiple() { if(_texture_addition > -9) --_texture_addition; }
    void toggle_show_mipmap_levels() { _show_mipmap_levels = !_show_mipmap_levels; }
+   void toggle_wireframe() { _show_wireframe = !_show_wireframe; }
 private:
    gl_context const& _context;
    send_mvp_function _send_mvp;
@@ -41,10 +45,11 @@ private:
    filtering_type _filtering_type;
    GLsizei _vertex_count;
    bool _show_mipmap_levels;
+   bool _show_wireframe;
    std::shared_ptr<model_data> _data;
 };
 
 
 model create_plane_model(gl_context const&, send_mvp_function const&);
 model create_cube_model(gl_context const&, send_mvp_function const&);
-model create_sphere_model(gl_context const&, send_mvp_function const&);
+model create_sphere_model(gl_context const&, send_mvp_function const&, int iter);

@@ -12,12 +12,13 @@
 // TODO: Draw a status text somewhere
 
 struct model_switcher {
-   model_switcher(model const& m) {
-      _models.push_back(m);
+   model_switcher(model&& m) {
+      _models.push_back(std::move(m));
       _idx = 0;
    }
-   void add_model(model const& m) { _models.push_back(m); }
+   void add_model(model&& m) { _models.push_back(std::move(m)); }
    model& current_model() { return _models[_idx]; }
+   model& back() { return _models.back(); }
    void prev() {
       if(!_idx) _idx = _models.size();
       --_idx;
@@ -30,11 +31,13 @@ private:
    std::vector<model> _models;
 };
 
-void setup_controller(gl_context& context, camera& main_camera, model_switcher& ms) {
+void setup_controller(gl_context& context, camera& main_camera, model_switcher& ms,
+        send_mvp_function const& f) {
    // Since controller is a singleton anyway it will do.
    static bool _rotation_mode = false;
    static double _mouse_x = 0;
    static double _mouse_y = 0;
+   static int detalization = 5;
    controller::instance()->mouse_button([&](int button, int action, int) {
       if(button == GLFW_MOUSE_BUTTON_LEFT) {
          _rotation_mode = (action == GLFW_PRESS);
@@ -64,6 +67,15 @@ void setup_controller(gl_context& context, camera& main_camera, model_switcher& 
          ms.current_model().decrease_multiple();
       else if(key == GLFW_KEY_M && action == GLFW_PRESS)
          ms.current_model().toggle_show_mipmap_levels();
+      else if(key == GLFW_KEY_V && action == GLFW_PRESS)
+         ms.current_model().toggle_wireframe();
+      else if(key == GLFW_KEY_PERIOD && action == GLFW_PRESS) {
+         if(detalization < 100) ++detalization;
+         ms.back() = std::move(create_sphere_model(context, f, detalization));
+      } else if(key == GLFW_KEY_COMMA && action == GLFW_PRESS) {
+         if(detalization > 0) --detalization;
+         ms.back() = std::move(create_sphere_model(context, f, detalization));
+      }
    });
    controller::instance()->cursor_pos([&](double xpos, double ypos) {
       if(!_rotation_mode) return;
@@ -83,10 +95,10 @@ int main() {
    auto sendmvp = [&](GLuint id) { send_matrix(id, main_camera.mvp()); };
    model_switcher ms(create_plane_model(context, sendmvp));
    ms.add_model(create_cube_model(context, sendmvp));
-   ms.add_model(create_sphere_model(context, sendmvp));
+   ms.add_model(create_sphere_model(context, sendmvp, 5));
    controller::init(context.main_window());
 
-   setup_controller(context, main_camera, ms);
+   setup_controller(context, main_camera, ms, sendmvp);
 
    glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
    glEnable(GL_DEPTH_TEST);
